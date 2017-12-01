@@ -1,5 +1,10 @@
 from urllib.parse import parse_qs
+from uuid import uuid1
 import json
+import time
+
+import boto3
+DYNAMODB = boto3.resource('dynamodb')
 
 
 TEMPLATE = """<!DOCTYPE html>
@@ -61,7 +66,16 @@ def root(event, context):
 
 
 def community_create(event, context):
-    return json_response(parse_qs(event['body']))
+    data = parse_qs(event['body'])
+    name = data['community[name]']
+
+
+    table = DYNAMODB.Table('communities')
+    now = int(time.time() * 1000)
+    item = {'createdAt': now, 'id': str(uuid1()), 'name': name,
+            'updatedAt': now}
+    print(table.put_item(Item=item))
+    return json_response(item)
 
 
 def community_delete(event, context):

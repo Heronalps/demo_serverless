@@ -1,17 +1,4 @@
-service: serverless-bboe
-
-provider:
-  memorySize: 128
-  name: aws
-  profile: bboeucsb
-  runtime: python3.6
-
 functions:
-  root:
-    events:
-      - http: GET /
-    handler: handler.root
-
   community_create:
     events:
       - http: POST communities
@@ -26,3 +13,45 @@ functions:
     events:
       - http: GET communities/new
     handler: handler.community_new
+
+  root:
+    events:
+      - http: GET /
+    handler: handler.root
+
+
+provider:
+  iamRoleStatements:
+    - Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Effect: Allow
+      Resource: arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/communities
+  memorySize: 128
+  name: aws
+  profile: bboeucsb
+  runtime: python3.6
+
+
+resources:
+  Resources:
+    communitiesTable:
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: communities
+      Type: 'AWS::DynamoDB::Table'
+
+
+service: serverless-bboe
