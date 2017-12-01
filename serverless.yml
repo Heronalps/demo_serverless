@@ -1,0 +1,28 @@
+service: serverless-bboe
+
+provider:
+  memorySize: 128
+  name: aws
+  profile: bboeucsb
+  runtime: python3.6
+
+functions:
+  root:
+    events:
+      - http: GET /
+    handler: handler.root
+
+  community_create:
+    events:
+      - http: POST communities
+    handler: handler.community_create
+
+  community_list:
+    events:
+      - http: GET communities
+    handler: handler.community_list
+
+  community_new:
+    events:
+      - http: GET communities/new
+    handler: handler.community_new
