@@ -4,8 +4,10 @@ import json
 import time
 
 import boto3
-DYNAMODB = boto3.resource('dynamodb')
+import botocore
 
+
+DYNAMODB = boto3.resource('dynamodb')
 
 TEMPLATE = """<!DOCTYPE html>
 <html>
@@ -27,7 +29,7 @@ TEMPLATE = """<!DOCTYPE html>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
 </body>
 </html>
-"""
+"""  # NOQA
 
 
 def json_response(data):
@@ -35,10 +37,14 @@ def json_response(data):
 
 
 def response(body=None, status=200):
-    data =  {'headers': {'Content-Type': 'text/html'}, 'statusCode': status}
+    data = {'headers': {'Content-Type': 'text/html'}, 'statusCode': status}
     if body is not None:
         data['body'] = TEMPLATE.format(body)
     return data
+
+
+def redirect(path):
+    return {'headers': {'Location': path}, 'statusCode': 302}
 
 
 def root(event, context):
@@ -67,15 +73,20 @@ def root(event, context):
 
 def community_create(event, context):
     data = parse_qs(event['body'])
-    name = data['community[name]']
-
+    name = data['community[name]'][0]
 
     table = DYNAMODB.Table('communities')
     now = int(time.time() * 1000)
-    item = {'createdAt': now, 'id': str(uuid1()), 'name': name,
-            'updatedAt': now}
-    print(table.put_item(Item=item))
-    return json_response(item)
+    item = {'createdAt': now, 'title': name}
+    try:
+        table.put_item(ConditionExpression='attribute_not_exists(title)',
+                       Item=item)
+    except botocore.exceptions.ClientError as exception:
+        code = exception.response['Error']['Code']
+        if code != 'ConditionalCheckFailedException':
+            raise
+        return response('{} already exists'.format(name))
+    return redirect('communities')
 
 
 def community_delete(event, context):
@@ -83,7 +94,8 @@ def community_delete(event, context):
 
 
 def community_list(event, context):
-    return response('Community list')
+    table = DYNAMODB.Table('communities')
+    return json_response(sorted(x['title'] for x in table.scan()['Items']))
 
 
 def community_new(event, context):

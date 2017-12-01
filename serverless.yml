@@ -42,10 +42,10 @@ resources:
     communitiesTable:
       Properties:
         AttributeDefinitions:
-          - AttributeName: id
+          - AttributeName: title
             AttributeType: S
         KeySchema:
-          - AttributeName: id
+          - AttributeName: title
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
