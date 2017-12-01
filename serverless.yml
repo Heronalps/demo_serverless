@@ -19,6 +19,16 @@ functions:
       - http: GET /
     handler: handler.root
 
+  submission_create:
+    events:
+      - http: POST submissions
+    handler: handler.submission_create
+
+  submission_new:
+    events:
+      - http: GET submissions/new
+    handler: handler.submission_new
+
 
 provider:
   iamRoleStatements:
@@ -30,7 +40,7 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
       Effect: Allow
-      Resource: arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/communities
+      Resource: arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/*
   memorySize: 128
   name: aws
   profile: bboeucsb
@@ -51,6 +61,20 @@ resources:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
         TableName: communities
+      Type: 'AWS::DynamoDB::Table'
+
+    submissionsTable:
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: submissions
       Type: 'AWS::DynamoDB::Table'
 
 
