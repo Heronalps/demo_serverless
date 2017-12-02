@@ -3,6 +3,7 @@ from uuid import uuid1
 import json
 import time
 
+from boto3.dynamodb import conditions
 import boto3
 import botocore
 
@@ -27,6 +28,11 @@ TEMPLATE = """<!doctype html>
       </nav>
       {}
     </div>
+    <script
+      src="https://code.jquery.com/jquery-3.2.1.min.js"
+      integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+      crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-ujs/1.2.2/rails.min.js" integrity="sha256-BbyWhCn0G+F6xbWJ2pcI5LnnpsnpSzyjJNVtl7ABp+M=" crossorigin="anonymous"></script>
   </body>
 </html>
 """  # NOQA
@@ -43,7 +49,7 @@ def community__form(name_error=''):
   </div>
   <input type="submit" name="commit" value="Create Community" class="btn btn-primary btn-sm" />
 </form>
-""".format(name_error)
+""".format(name_error)  # NOQA
 
 
 def community_create(event, context):
@@ -72,13 +78,24 @@ def community_delete(event, context):
     return response(status=204)
 
 
-def community_list(event, context):
-    table = DYNAMODB.Table('communities')
-    return json_response(sorted(x['title'] for x in table.scan()['Items']))
-
-
 def community_new(event, context):
     return response(community__form())
+
+
+def community_show(event, context):
+    body = """<h1>{community}</h1>
+
+{listing}
+
+<a class="btn btn-primary" href="submissions/new?community={community}">New Submission</a>
+<a class="btn btn-danger" data-confirm="Are you sure?" rel="nofollow" data-method="delete" href="comunities/{community}">Delete Community</a>
+"""  # NOQA
+    community = event['pathParameters']['name']
+    table = DYNAMODB.Table('submissions')
+    items = table.scan(FilterExpression=conditions.Attr('community')
+                       .eq(community))['Items']
+    return response(body.format(community=community, listing=listing(sorted(
+        items, key=lambda x: -x['createdAt']))))
 
 
 def json_response(data):

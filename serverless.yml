@@ -4,15 +4,15 @@ functions:
       - http: POST communities
     handler: handler.community_create
 
-  community_list:
-    events:
-      - http: GET communities
-    handler: handler.community_list
-
   community_new:
     events:
       - http: GET communities/new
     handler: handler.community_new
+
+  community_show:
+    events:
+      - http: GET communities/{name}
+    handler: handler.community_show
 
   root:
     events:
