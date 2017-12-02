@@ -9,25 +9,25 @@ import botocore
 
 DYNAMODB = boto3.resource('dynamodb')
 
-TEMPLATE = """<!DOCTYPE html>
-<html>
-<head>
-  <title>Demo</title>
-  <base href="/dev/">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
-</head>
-<body>
-  <div class="container">
-    <nav class="navbar navbar-default">
-      <a class="navbar-brand" href=".">Demo App</a>
-    </nav>
-    {}
-  </div>
+TEMPLATE = """<!doctype html>
+<html lang="en">
+  <head>
+    <title>Demo</title>
+    <base href="/dev/">
+    <link href="data:image/x-icon;base64,YourBase64StringHere" rel="icon" type="image/x-icon" />
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
-</body>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+  </head>
+  <body>
+    <div class="container">
+      <nav class="navbar navbar-dark bg-dark">
+        <a class="navbar-brand" href="/">Demo App</a>
+      </nav>
+      {}
+    </div>
+  </body>
 </html>
 """  # NOQA
 
@@ -47,10 +47,8 @@ def redirect(path):
     return {'headers': {'Location': path}, 'statusCode': 302}
 
 
-def root(event, context):
-    body = """<h3>Submissions</h3>
-
-<table class="table">
+def listing(data):
+    table = """<table class="table">
   <thead>
     <tr>
       <th>Title</th>
@@ -62,24 +60,29 @@ def root(event, context):
 
   <tbody>{}</tbody>
 </table>
-
-<br>
-<a class="btn btn-primary" href="submissions/new">New Submission</a>
-<a class="btn btn-primary" href="communities/new">New Community</a>
 """
 
     row = """<tr>
   <td><a href="{url}">{title}</a></td>
   <td>{url}</td>
-  <td>{community}</td>
-  <td><a class="btn btn-primary btn-xs" href="submissions/{id}">0 comments</a></td>
+  <td><a href="communities/{community}">{community}</a></td>
+  <td><a class="btn btn-primary btn-sm" href="submissions/{id}">0 comments</a></td>
 </tr>
 """  # NOQA
+    return table.format(''.join([row.format(**x) for x in data]))
 
+
+def root(event, context):
+    body = """<h1>Front Page</h1>
+
+{listing}
+
+<a class="btn btn-primary" href="submissions/new">New Submission</a>
+<a class="btn btn-primary" href="communities/new">New Community</a>
+"""
     table = DYNAMODB.Table('submissions')
-    submissions = [row.format(**x) for x in sorted(
-        table.scan()['Items'], key=lambda x: -x['createdAt'])]
-    return response(body.format(''.join(submissions)))
+    return response(body.format(listing=listing(sorted(
+        table.scan()['Items'], key=lambda x: -x['createdAt']))))
 
 
 def community_create(event, context):
@@ -113,16 +116,12 @@ def community_new(event, context):
     body = """<h1>New Community</h1>
 
 <form action="communities" method="post">
-  <div class="field">
+  <div class="form-group">
     <label for="community_name">Name</label><br>
     <input class="form-control" type="text" name="community[name]" id="community_name" /></label>
   </div>
-  <div class="actions">
-    <input type="submit" name="commit" value="Create Community" class="btn btn-primary" />
-  </div>
+  <input type="submit" name="commit" value="Create Community" class="btn btn-primary btn-sm" />
 </form>
-
-<a href="communities">Back</a>
 """  # NOQA
     return response(body)
 
