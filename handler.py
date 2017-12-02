@@ -32,9 +32,26 @@ TEMPLATE = """<!doctype html>
 """  # NOQA
 
 
+def community__form(name_error=''):
+    if name_error:
+        name_error = '<span class="error">{}</span>'.format(name_error)
+    return """<h1>New Community</h1>
+<form action="communities" method="post">
+  <div class="form-group">
+    <label for="community_name">Name</label><br>
+    <input class="form-control" type="text" name="community[name]" id="community_name" /></label>{}
+  </div>
+  <input type="submit" name="commit" value="Create Community" class="btn btn-primary btn-sm" />
+</form>
+""".format(name_error)
+
+
 def community_create(event, context):
     data = parse_qs(event['body'])
-    name = data['community[name]'][0]
+    name = data.get('community[name]', [''])[0]
+    if len(name) < 4:
+        return response(
+            community__form('is too short (minimum is 4 characters)'))
 
     table = DYNAMODB.Table('communities')
     now = int(time.time() * 1000)
@@ -46,8 +63,9 @@ def community_create(event, context):
         code = exception.response['Error']['Code']
         if code != 'ConditionalCheckFailedException':
             raise
-        return response('{} already exists'.format(name))
-    return redirect('communities')
+        return response(
+            community__form('has already been taken'))
+    return redirect('communities/{}'.format(name))
 
 
 def community_delete(event, context):
@@ -60,17 +78,7 @@ def community_list(event, context):
 
 
 def community_new(event, context):
-    body = """<h1>New Community</h1>
-
-<form action="communities" method="post">
-  <div class="form-group">
-    <label for="community_name">Name</label><br>
-    <input class="form-control" type="text" name="community[name]" id="community_name" /></label>
-  </div>
-  <input type="submit" name="commit" value="Create Community" class="btn btn-primary btn-sm" />
-</form>
-"""  # NOQA
-    return response(body)
+    return response(community__form())
 
 
 def json_response(data):
