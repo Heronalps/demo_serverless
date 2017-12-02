@@ -32,59 +32,6 @@ TEMPLATE = """<!doctype html>
 """  # NOQA
 
 
-def json_response(data):
-    return {'body': json.dumps(data), 'statusCode': 200}
-
-
-def response(body=None, status=200):
-    data = {'headers': {'Content-Type': 'text/html'}, 'statusCode': status}
-    if body is not None:
-        data['body'] = TEMPLATE.format(body)
-    return data
-
-
-def redirect(path):
-    return {'headers': {'Location': path}, 'statusCode': 302}
-
-
-def listing(data):
-    table = """<table class="table">
-  <thead>
-    <tr>
-      <th>Title</th>
-      <th>Url</th>
-      <th>Community</th>
-      <th colspan="3"></th>
-    </tr>
-  </thead>
-
-  <tbody>{}</tbody>
-</table>
-"""
-
-    row = """<tr>
-  <td><a href="{url}">{title}</a></td>
-  <td>{url}</td>
-  <td><a href="communities/{community}">{community}</a></td>
-  <td><a class="btn btn-primary btn-sm" href="submissions/{id}">0 comments</a></td>
-</tr>
-"""  # NOQA
-    return table.format(''.join([row.format(**x) for x in data]))
-
-
-def root(event, context):
-    body = """<h1>Front Page</h1>
-
-{listing}
-
-<a class="btn btn-primary" href="submissions/new">New Submission</a>
-<a class="btn btn-primary" href="communities/new">New Community</a>
-"""
-    table = DYNAMODB.Table('submissions')
-    return response(body.format(listing=listing(sorted(
-        table.scan()['Items'], key=lambda x: -x['createdAt']))))
-
-
 def community_create(event, context):
     data = parse_qs(event['body'])
     name = data['community[name]'][0]
@@ -124,6 +71,59 @@ def community_new(event, context):
 </form>
 """  # NOQA
     return response(body)
+
+
+def json_response(data):
+    return {'body': json.dumps(data), 'statusCode': 200}
+
+
+def listing(data):
+    table = """<table class="table">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Url</th>
+      <th>Community</th>
+      <th colspan="3"></th>
+    </tr>
+  </thead>
+
+  <tbody>{}</tbody>
+</table>
+"""
+
+    row = """<tr>
+  <td><a href="{url}">{title}</a></td>
+  <td>{url}</td>
+  <td><a href="communities/{community}">{community}</a></td>
+  <td><a class="btn btn-primary btn-sm" href="submissions/{id}">0 comments</a></td>
+</tr>
+"""  # NOQA
+    return table.format(''.join([row.format(**x) for x in data]))
+
+
+def redirect(path):
+    return {'headers': {'Location': path}, 'statusCode': 302}
+
+
+def response(body=None, status=200):
+    data = {'headers': {'Content-Type': 'text/html'}, 'statusCode': status}
+    if body is not None:
+        data['body'] = TEMPLATE.format(body)
+    return data
+
+
+def root(event, context):
+    body = """<h1>Front Page</h1>
+
+{listing}
+
+<a class="btn btn-primary" href="submissions/new">New Submission</a>
+<a class="btn btn-primary" href="communities/new">New Community</a>
+"""
+    table = DYNAMODB.Table('submissions')
+    return response(body.format(listing=listing(sorted(
+        table.scan()['Items'], key=lambda x: -x['createdAt']))))
 
 
 def submission_new(event, context):
