@@ -4,6 +4,11 @@ functions:
       - http: POST communities
     handler: handler.community_create
 
+  community_delete:
+    events:
+      - http: POST communities/{name}
+    handler: handler.community_delete
+
   community_new:
     events:
       - http: GET communities/new
@@ -33,12 +38,13 @@ functions:
 provider:
   iamRoleStatements:
     - Action:
-        - dynamodb:Query
-        - dynamodb:Scan
+        - dynamodb:BatchWriteItem
+        - dynamodb:DeleteItem
         - dynamodb:GetItem
         - dynamodb:PutItem
+        - dynamodb:Query
+        - dynamodb:Scan
         - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
       Effect: Allow
       Resource: arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/*
   memorySize: 128
@@ -66,8 +72,20 @@ resources:
     submissionsTable:
       Properties:
         AttributeDefinitions:
+          - AttributeName: community
+            AttributeType: S
           - AttributeName: id
             AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: SubmissionCommunityIndex
+            KeySchema:
+              - AttributeName: community
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
         KeySchema:
           - AttributeName: id
             KeyType: HASH

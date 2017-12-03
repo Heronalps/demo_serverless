@@ -24,7 +24,7 @@ TEMPLATE = """<!doctype html>
   <body>
     <div class="container">
       <nav class="navbar navbar-dark bg-dark">
-        <a class="navbar-brand" href="/">Demo App</a>
+        <a class="navbar-brand" href=".">Demo App</a>
       </nav>
       {}
     </div>
@@ -75,7 +75,15 @@ def community_create(event, context):
 
 
 def community_delete(event, context):
-    return response(status=204)
+    community = event['pathParameters']['name']
+    DYNAMODB.Table('communities').delete_item(Key={'title': community})
+    submissions_table = DYNAMODB.Table('submissions')
+    with submissions_table.batch_writer() as batch:
+        for item in submissions_table.scan(
+                FilterExpression=conditions.Key('community')
+                .eq(community), IndexName='SubmissionCommunityIndex')['Items']:
+            batch.delete_item(Key={'id': item['id']})
+    return redirect('/dev/')
 
 
 def community_new(event, context):
@@ -88,7 +96,7 @@ def community_show(event, context):
 {listing}
 
 <a class="btn btn-primary" href="submissions/new?community={community}">New Submission</a>
-<a class="btn btn-danger" data-confirm="Are you sure?" rel="nofollow" data-method="delete" href="comunities/{community}">Delete Community</a>
+<a class="btn btn-danger" data-confirm="Are you sure?" rel="nofollow" data-method="delete" href="communities/{community}">Delete Community</a>
 """  # NOQA
     community = event['pathParameters']['name']
     table = DYNAMODB.Table('submissions')
