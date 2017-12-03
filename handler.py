@@ -47,7 +47,7 @@ def community__form(name_error=''):
     <label for="community_name">Name</label><br>
     <input class="form-control" type="text" name="community[name]" id="community_name" /></label>{}
   </div>
-  <input type="submit" name="commit" value="Create Community" class="btn btn-primary btn-sm" />
+  <input type="submit" name="commit" value="Create Community" class="btn btn-primary btn-sm" data-disable-with="Create Community" />
 </form>
 """.format(name_error)  # NOQA
 
@@ -176,7 +176,7 @@ def submission_new(event, context):
     <select class="form-control" name="submission[community_id]" id="submission_community_id">{}</select>
   </div>
   <div class="actions">
-    <input type="submit" name="commit" value="Create Submission" class="btn btn-primary" />
+    <input type="submit" name="commit" value="Create Submission" class="btn btn-primary" data-disable-with="Create Submission" />
   </div>
 </form>
 """  # NOQA
