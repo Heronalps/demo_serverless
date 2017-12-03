@@ -29,6 +29,11 @@ functions:
       - http: POST submissions
     handler: handler.submission_create
 
+  submission_delete:
+    events:
+      - http: POST submissions/{id}
+    handler: handler.submission_delete
+
   submission_new:
     events:
       - http: GET submissions/new

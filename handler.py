@@ -226,6 +226,12 @@ def submission_create(event, context):
     return redirect('/dev/submissions/{}'.format(submission_id))
 
 
+def submission_delete(event, context):
+    submission_id = event['pathParameters']['id']
+    DYNAMODB.Table('submissions').delete_item(Key={'id': submission_id})
+    return redirect('/dev/')
+
+
 def submission_new(event, context):
     return response(submission__form())
 
