@@ -60,6 +60,20 @@ def comment__form(submission, message_error=''):
         submission_title=submission['title'])
 
 
+def comment__render(comment):
+    body = """<div class="card bg-light">
+  <div class="card-body">
+    {message}<br>
+    <a class="btn btn-primary btn-sm" href="comments/new?parent_id={comment_id}&submission_id={submission_id}">Reply</a>
+    <a class="btn btn-danger btn-sm" data-confirm="Are you sure?" data-method="delete"
+       href="comments/{comment_id}">Delete</a>
+  </div>
+</div>
+"""  # NOQA
+    return body.format(comment_id=comment['id'], message=comment['id'],
+                       submission_id=comment['submission_id'])
+
+
 def comment_create(event, context):
     data = parse_qs(event['body'])
     message = data.get('comment[message]', [''])[0]
@@ -304,10 +318,27 @@ def submission_show(event, context):
   <a class="btn btn-primary btn-sm" href="comments/new?submission_id={submission_id}">Comment</a>
   <a class="btn btn-danger btn-sm" data-confirm="Are you sure?" data-method="delete" href="submissions/{submission_id}">Delete Submission</a>
 </div>
+
+{comments}
 """  # NOQA
     submission_id = event['pathParameters']['id']
-    table = DYNAMODB.Table('submissions')
-    submission = table.get_item(Key={'id': submission_id})['Item']
+    submission_table = DYNAMODB.Table('submissions')
+    submission = submission_table.get_item(Key={'id': submission_id})['Item']
+
+    comments_table = DYNAMODB.Table('comments')
+    comments = comments_table.scan(
+        FilterExpression=conditions.Key('submission_id')
+        .eq(submission_id), IndexName='CommentSubmissionIndex')['Items']
+
+    comments_body = ""
+    if comments:
+        comments_body = """<div>
+  Comments:<br>
+  {}
+</div>
+""".format('\n'.join([comment__render(comment) for comment in comments]))
+
     return response(body.format(
-        community=submission['community'], submission_id=submission_id,
-        title=submission['title'], url=submission['url']))
+        comments=comments_body, community=submission['community'],
+        submission_id=submission_id, title=submission['title'],
+        url=submission['url']))
