@@ -159,39 +159,59 @@ def root(event, context):
         table.scan()['Items'], key=lambda x: -x['createdAt']))))
 
 
-def submission_new(event, context):
+def submission__form(community_error='', title_error='', url_error=''):
+    if community_error:
+        community_error = '<span class="error">{}</span>'.format(
+            community_error)
+    if title_error:
+        title_error = '<span class="error">{}</span>'.format(title_error)
+    if url_error:
+        url_error = '<span class="error">{}</span>'.format(url_error)
+
     body = """<h1>New Submission</h1>
 
 <form action="submissions" method="post">
-  <div class="field">
+  <div class="form-group">
     <label for="submission_title">Title</label><br>
-    <input class="form-control" type="text" name="submission[title]" id="submission_title" />
+    <input class="form-control" type="text" name="submission[title]" id="submission_title" />{}
   </div>
-  <div class="field">
+  <div class="form-group">
     <label for="submission_url">Url</label><br>
-    <input class="form-control" type="text" name="submission[url]" id="submission_url" />
+    <input class="form-control" type="text" name="submission[url]" id="submission_url" />{}
   </div>
-  <div class="field">
-    <label for="submission_community_id">Community</label><br>
-    <select class="form-control" name="submission[community_id]" id="submission_community_id">{}</select>
+  <div class="form-group">
+    <label for="submission_community">Community</label><br>
+    <select class="form-control" name="submission[community]" id="submission_community">{}</select>{}
   </div>
-  <div class="actions">
-    <input type="submit" name="commit" value="Create Submission" class="btn btn-primary" data-disable-with="Create Submission" />
-  </div>
+  <input type="submit" name="commit" value="Create Submission" class="btn btn-primary btn-sm" data-disable-with="Create Submission" />
 </form>
 """  # NOQA
     table = DYNAMODB.Table('communities')
     communities = sorted(x['title'] for x in table.scan()['Items'])
     options = ''.join(['<option value="{0}">{0}</option>'
                        .format(x) for x in communities])
-    return response(body.format(options))
+    return body.format(title_error, url_error, options, community_error)
+
+
+def submission_new(event, context):
+    return response(submission__form())
 
 
 def submission_create(event, context):
     data = parse_qs(event['body'])
-    community = data['submission[community_id]'][0]
-    title = data['submission[title]'][0]
-    url = data['submission[url]'][0]
+    community = data.get('submission[community]', [''])[0]
+    title = data.get('submission[title]', [''])[0]
+    url = data.get('submission[url]', [''])[0]
+
+    errors = {}
+    if not community:
+        errors['community_error'] = 'invalid community'
+    if len(title) < 5:
+        errors['title_error'] = 'is too short (minimum is 5 characters)'
+    if not url.startswith('http'):
+        errors['url_error'] = 'is not a valid URL'
+    if errors:
+        return response(submission__form(**errors))
 
     table = DYNAMODB.Table('submissions')
     now = int(time.time() * 1000)
