@@ -1,4 +1,9 @@
 functions:
+  comment_create:
+    events:
+      - http: POST comments
+    handler: handler.comment_create
+
   comment_new:
     events:
       - http: GET comments/new

@@ -60,6 +60,22 @@ def comment__form(submission, message_error=''):
         submission_title=submission['title'])
 
 
+def comment_create(event, context):
+    data = parse_qs(event['body'])
+    message = data.get('comment[message]', [''])[0]
+    submission_id = data.get('comment[submission_id]', [''])[0]
+
+    if not submission_id:
+        return response(status=422)
+    table = DYNAMODB.Table('submissions')
+    submission = table.get_item(Key={'id': submission_id})['Item']
+
+    if len(message) < 1:
+        return response(comment__form(
+            submission, message_error='is too short (minimum is 1 character)'))
+    return json_response(event)
+
+
 def comment_new(event, context):
     submission_id = event['queryStringParameters']['submission_id']
     table = DYNAMODB.Table('submissions')
