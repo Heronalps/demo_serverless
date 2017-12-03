@@ -193,10 +193,6 @@ def submission__form(community_error='', title_error='', url_error=''):
     return body.format(title_error, url_error, options, community_error)
 
 
-def submission_new(event, context):
-    return response(submission__form())
-
-
 def submission_create(event, context):
     data = parse_qs(event['body'])
     community = data.get('submission[community]', [''])[0]
@@ -215,7 +211,8 @@ def submission_create(event, context):
 
     table = DYNAMODB.Table('submissions')
     now = int(time.time() * 1000)
-    item = {'community': community, 'createdAt': now, 'id': str(uuid1()),
+    submission_id = str(uuid1())
+    item = {'community': community, 'createdAt': now, 'id': submission_id,
             'title': title, 'url': url}
 
     try:
@@ -225,5 +222,26 @@ def submission_create(event, context):
         code = exception.response['Error']['Code']
         if code != 'ConditionalCheckFailedException':
             raise
-        return response('{} already exists'.format(title))
-    return redirect('.')
+        return response('{} already exists'.format(title), status=422)
+    return redirect('/dev/submissions/{}'.format(submission_id))
+
+
+def submission_new(event, context):
+    return response(submission__form())
+
+
+def submission_show(event, context):
+    body = """<h1>{title} (via <a href="communities/{community}">{community}</a>)</h1>
+<p><a href="{url}">{url}</a></p>
+
+<div>
+  <a class="btn btn-primary btn-sm" href="comments/new?submission_id={submission_id}">Comment</a>
+  <a class="btn btn-danger btn-sm" data-confirm="Are you sure?" data-method="delete" href="submissions/{submission_id}">Delete Submission</a>
+</div>
+"""  # NOQA
+    submission_id = event['pathParameters']['id']
+    table = DYNAMODB.Table('submissions')
+    submission = table.get_item(Key={'id': submission_id})['Item']
+    return response(body.format(
+        community=submission['community'], submission_id=submission_id,
+        title=submission['title'], url=submission['url']))

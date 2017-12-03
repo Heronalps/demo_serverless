@@ -34,6 +34,10 @@ functions:
       - http: GET submissions/new
     handler: handler.submission_new
 
+  submission_show:
+    events:
+      - http: GET submissions/{id}
+    handler: handler.submission_show
 
 provider:
   iamRoleStatements:
