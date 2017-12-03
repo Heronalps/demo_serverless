@@ -38,6 +38,35 @@ TEMPLATE = """<!doctype html>
 """  # NOQA
 
 
+def comment__form(submission, message_error=''):
+    if message_error:
+        message_error = '<span class="error">{}</span>'.format(message_error)
+    body = """<h1>New Comment</h1>
+
+<h2>Submission: {submission_title}</h2>
+
+<form action="comments" method="post">
+  <input value="{submission_id}" type="hidden" name="comment[submission_id]" id="comment_submission_id" />
+
+  <div class="form-group">
+    <label for="comment_message">Message</label><br>
+    <textarea class="form-control" name="comment[message]" id="comment_message" /></textarea>{message_error}
+  </div>
+  <input type="submit" name="commit" value="Create Comment" class="btn btn-primary btn-sm" data-disable-with="Create Comment" />
+</form>
+"""  # NOQA
+    return body.format(
+        message_error=message_error, submission_id=submission['id'],
+        submission_title=submission['title'])
+
+
+def comment_new(event, context):
+    submission_id = event['queryStringParameters']['submission_id']
+    table = DYNAMODB.Table('submissions')
+    submission = table.get_item(Key={'id': submission_id})['Item']
+    return response(comment__form(submission))
+
+
 def community__form(name_error=''):
     if name_error:
         name_error = '<span class="error">{}</span>'.format(name_error)
@@ -45,7 +74,7 @@ def community__form(name_error=''):
 <form action="communities" method="post">
   <div class="form-group">
     <label for="community_name">Name</label><br>
-    <input class="form-control" type="text" name="community[name]" id="community_name" /></label>{}
+    <input class="form-control" type="text" name="community[name]" id="community_name" />{}
   </div>
   <input type="submit" name="commit" value="Create Community" class="btn btn-primary btn-sm" data-disable-with="Create Community" />
 </form>

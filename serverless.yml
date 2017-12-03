@@ -1,4 +1,9 @@
 functions:
+  comment_new:
+    events:
+      - http: GET comments/new
+    handler: handler.comment_new
+
   community_create:
     events:
       - http: POST communities
