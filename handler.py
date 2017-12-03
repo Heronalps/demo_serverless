@@ -73,7 +73,22 @@ def comment_create(event, context):
     if len(message) < 1:
         return response(comment__form(
             submission, message_error='is too short (minimum is 1 character)'))
-    return json_response(event)
+
+    table = DYNAMODB.Table('comments')
+    now = int(time.time() * 1000)
+    comment_id = str(uuid1())
+    item = {'createdAt': now, 'id': comment_id, 'message': message,
+            'submission_id': submission_id}
+
+    try:
+        table.put_item(ConditionExpression='attribute_not_exists(id)',
+                       Item=item)
+    except botocore.exceptions.ClientError as exception:
+        code = exception.response['Error']['Code']
+        if code != 'ConditionalCheckFailedException':
+            raise
+        return response(status=422)
+    return redirect('/dev/submissions/{}'.format(submission_id))
 
 
 def comment_new(event, context):
@@ -267,7 +282,7 @@ def submission_create(event, context):
         code = exception.response['Error']['Code']
         if code != 'ConditionalCheckFailedException':
             raise
-        return response('{} already exists'.format(title), status=422)
+        return response(status=422)
     return redirect('/dev/submissions/{}'.format(submission_id))
 
 

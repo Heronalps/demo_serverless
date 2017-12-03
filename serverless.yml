@@ -74,6 +74,32 @@ provider:
 
 resources:
   Resources:
+    commentsTable:
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: submission_id
+            AttributeType: S
+        GlobalSecondaryIndexes:
+          - IndexName: CommentSubmissionIndex
+            KeySchema:
+              - AttributeName: submission_id
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: comments
+      Type: 'AWS::DynamoDB::Table'
+
     communitiesTable:
       Properties:
         AttributeDefinitions:
