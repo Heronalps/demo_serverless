@@ -116,12 +116,34 @@ def comment_create(event, context):
 
 
 def comment_delete(event, context):
-    comment = DYNAMODB.Table('comments').delete_item(
+    comments_table = DYNAMODB.Table('comments')
+    deleted_comment = comments_table.delete_item(
         Key={'id': event['pathParameters']['id']},
         ReturnValues='ALL_OLD').get('Attributes')
-    if comment:
-        return redirect('/dev/submissions/{}'.format(comment['submission_id']))
-    return redirect('/dev/')
+
+    if not deleted_comment:
+        return redirect('/dev/')
+
+    # Find child comments
+    submission_comments = comments_table.scan(
+        FilterExpression=conditions.Key('submission_id')
+        .eq(deleted_comment['submission_id']),
+        IndexName='CommentSubmissionIndex')['Items']
+
+    by_parent = {}
+    for comment in submission_comments:
+        by_parent.setdefault(comment.get('parent_id'), []).append(comment)
+
+    queue = by_parent.get(deleted_comment['id'], [])
+    with comments_table.batch_writer() as comments_batch:
+        while queue:
+            comment = queue.pop()
+            if comment['id'] in by_parent:
+                queue.extend(by_parent[comment['id']])
+            comments_batch.delete_item(Key={'id': comment['id']})
+
+    return redirect('/dev/submissions/{}'
+                    .format(deleted_comment['submission_id']))
 
 
 def comment_new(event, context):
