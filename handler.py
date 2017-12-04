@@ -105,6 +105,15 @@ def comment_create(event, context):
     return redirect('/dev/submissions/{}'.format(submission_id))
 
 
+def comment_delete(event, context):
+    comment = DYNAMODB.Table('comments').delete_item(
+        Key={'id': event['pathParameters']['id']},
+        ReturnValues='ALL_OLD').get('Attributes')
+    if comment:
+        return redirect('/dev/submissions/{}'.format(comment['submission_id']))
+    return redirect('/dev/')
+
+
 def comment_new(event, context):
     submission_id = event['queryStringParameters']['submission_id']
     table = DYNAMODB.Table('submissions')
