@@ -82,6 +82,8 @@ resources:
     commentsTable:
       Properties:
         AttributeDefinitions:
+          - AttributeName: createdAt
+            AttributeType: N
           - AttributeName: id
             AttributeType: S
           - AttributeName: submission_id
@@ -91,6 +93,8 @@ resources:
             KeySchema:
               - AttributeName: submission_id
                 KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
             Projection:
               NonKeyAttributes:
                 - message
