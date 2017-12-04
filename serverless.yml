@@ -128,6 +128,8 @@ resources:
     submissionsTable:
       Properties:
         AttributeDefinitions:
+          - AttributeName: createdAt
+            AttributeType: N
           - AttributeName: community
             AttributeType: S
           - AttributeName: id
@@ -137,8 +139,10 @@ resources:
             KeySchema:
               - AttributeName: community
                 KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
             Projection:
-              ProjectionType: KEYS_ONLY
+              ProjectionType: ALL
             ProvisionedThroughput:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1

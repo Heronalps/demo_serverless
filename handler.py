@@ -190,17 +190,18 @@ def community_show(event, context):
 """  # NOQA
     community = event['pathParameters']['name']
     table = DYNAMODB.Table('submissions')
-    items = table.scan(FilterExpression=conditions.Attr('community')
-                       .eq(community))['Items']
-    return response(body.format(community=community, listing=listing(sorted(
-        items, key=lambda x: -x['createdAt']))))
+    items = table.scan(FilterExpression=conditions.Key('community')
+                       .eq(community),
+                       IndexName='SubmissionCommunityIndex')['Items']
+    return response(body.format(community=community,
+                                listing=listing(reversed(items))))
 
 
 def json_response(data):
     return {'body': json.dumps(data), 'statusCode': 200}
 
 
-def listing(data):
+def listing(submissions):
     return """<table class="table">
   <thead>
     <tr>
@@ -213,7 +214,7 @@ def listing(data):
 
   <tbody>{}</tbody>
 </table>
-""".format(''.join([listing_row(submission) for submission in data]))
+""".format(''.join([listing_row(submission) for submission in submissions]))
 
 
 def listing_row(submission):
@@ -258,8 +259,8 @@ def root(event, context):
 <a class="btn btn-primary" href="communities/new">New Community</a>
 """
     table = DYNAMODB.Table('submissions')
-    return response(body.format(listing=listing(sorted(
-        table.scan()['Items'], key=lambda x: -x['createdAt']))))
+    return response(body.format(listing=listing(reversed(
+        table.scan(IndexName='SubmissionCommunityIndex')['Items']))))
 
 
 def submission__form(community_error='', title_error='', url_error=''):
