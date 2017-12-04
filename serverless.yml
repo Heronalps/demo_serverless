@@ -74,6 +74,7 @@ provider:
   memorySize: 128
   name: aws
   profile: bboeucsb
+  region: us-west-2
   runtime: python3.6
 
 
