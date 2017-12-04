@@ -38,15 +38,18 @@ TEMPLATE = """<!doctype html>
 """  # NOQA
 
 
-def comment__form(submission, message_error=''):
+def comment__form(submission, parent_id, message_error=''):
     if message_error:
         message_error = '<span class="error">{}</span>'.format(message_error)
+    if parent_id:
+        parent_id = '<input value="{}" type="hidden" name="comment[parent_id]" id="comment_parent_id" />'.format(parent_id)  # NOQA
     body = """<h1>New Comment</h1>
 
 <h2>Submission: {submission_title}</h2>
 
 <form action="comments" method="post">
   <input value="{submission_id}" type="hidden" name="comment[submission_id]" id="comment_submission_id" />
+  {parent_id}
 
   <div class="form-group">
     <label for="comment_message">Message</label><br>
@@ -56,8 +59,8 @@ def comment__form(submission, message_error=''):
 </form>
 """  # NOQA
     return body.format(
-        message_error=message_error, submission_id=submission['id'],
-        submission_title=submission['title'])
+        message_error=message_error, parent_id=parent_id,
+        submission_id=submission['id'], submission_title=submission['title'])
 
 
 def comment__render(comment):
@@ -67,16 +70,21 @@ def comment__render(comment):
     <a class="btn btn-primary btn-sm" href="comments/new?parent_id={comment_id}&submission_id={submission_id}">Reply</a>
     <a class="btn btn-danger btn-sm" data-confirm="Are you sure?" data-method="delete"
        href="comments/{comment_id}">Delete</a>
+    {nested}
   </div>
 </div>
 """  # NOQA
     return body.format(comment_id=comment['id'], message=comment['message'],
+                       nested='\n'.join([
+                           comment__render(reply)
+                           for reply in comment.get('replies', [])]),
                        submission_id=comment['submission_id'])
 
 
 def comment_create(event, context):
     data = parse_qs(event['body'])
     message = data.get('comment[message]', [''])[0]
+    parent_id = data.get('comment[parent_id]', [''])[0]
     submission_id = data.get('comment[submission_id]', [''])[0]
 
     if not submission_id:
@@ -86,14 +94,16 @@ def comment_create(event, context):
 
     if len(message) < 1:
         return response(comment__form(
-            submission, message_error='is too short (minimum is 1 character)'))
+            submission, parent_id,
+            message_error='is too short (minimum is 1 character)'))
 
     table = DYNAMODB.Table('comments')
     now = int(time.time() * 1000)
     comment_id = str(uuid1())
     item = {'createdAt': now, 'id': comment_id, 'message': message,
             'submission_id': submission_id}
-
+    if parent_id:
+        item['parent_id'] = parent_id
     try:
         table.put_item(ConditionExpression='attribute_not_exists(id)',
                        Item=item)
@@ -116,9 +126,10 @@ def comment_delete(event, context):
 
 def comment_new(event, context):
     submission_id = event['queryStringParameters']['submission_id']
+    parent_id = event['queryStringParameters'].get('parent_id', '')
     table = DYNAMODB.Table('submissions')
     submission = table.get_item(Key={'id': submission_id})['Item']
-    return response(comment__form(submission))
+    return response(comment__form(submission, parent_id))
 
 
 def community__form(name_error=''):
@@ -373,9 +384,22 @@ def submission_show(event, context):
   Comments:<br>
   {}
 </div>
-""".format('\n'.join([comment__render(comment) for comment in comments]))
+""".format('\n'.join([comment__render(comment)
+                      for comment in treeify(comments)]))
 
     return response(body.format(
         comments=comments_body, community=submission['community'],
         submission_id=submission_id, title=submission['title'],
         url=submission['url']))
+
+
+def treeify(comments):
+    by_id = {comment['id']: comment for comment in comments}
+    root_comments = []
+    for comment in comments:
+        parent_id = comment.get('parent_id')
+        if parent_id:
+            by_id[parent_id].setdefault('replies', []).append(comment)
+        else:
+            root_comments.append(comment)
+    return root_comments

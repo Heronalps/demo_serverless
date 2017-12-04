@@ -98,6 +98,7 @@ resources:
             Projection:
               NonKeyAttributes:
                 - message
+                - parent_id
               ProjectionType: INCLUDE
             ProvisionedThroughput:
               ReadCapacityUnits: 1
