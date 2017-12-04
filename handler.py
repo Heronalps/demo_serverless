@@ -160,12 +160,19 @@ def community_create(event, context):
 def community_delete(event, context):
     community = event['pathParameters']['name']
     DYNAMODB.Table('communities').delete_item(Key={'title': community})
+    comments_table = DYNAMODB.Table('comments')
     submissions_table = DYNAMODB.Table('submissions')
-    with submissions_table.batch_writer() as batch:
-        for item in submissions_table.scan(
-                FilterExpression=conditions.Key('community')
-                .eq(community), IndexName='SubmissionCommunityIndex')['Items']:
-            batch.delete_item(Key={'id': item['id']})
+    with submissions_table.batch_writer() as submissions_batch:
+        with comments_table.batch_writer() as comments_batch:
+            for submission in submissions_table.scan(
+                    FilterExpression=conditions.Key('community').eq(community),
+                    IndexName='SubmissionCommunityIndex')['Items']:
+                submissions_batch.delete_item(Key={'id': submission['id']})
+                for comment in comments_table.scan(
+                        FilterExpression=conditions.Key('submission_id')
+                        .eq(submission['id']),
+                        IndexName='CommentSubmissionIndex')['Items']:
+                    comments_batch.delete_item(Key={'id': comment['id']})
     return redirect('/dev/')
 
 
@@ -325,6 +332,13 @@ def submission_create(event, context):
 def submission_delete(event, context):
     submission_id = event['pathParameters']['id']
     DYNAMODB.Table('submissions').delete_item(Key={'id': submission_id})
+    comments_table = DYNAMODB.Table('comments')
+    with comments_table.batch_writer() as batch:
+        for item in comments_table.scan(
+                FilterExpression=conditions.Key('submission_id')
+                .eq(submission_id),
+                IndexName='CommentSubmissionIndex')['Items']:
+            batch.delete_item(Key={'id': item['id']})
     return redirect('/dev/')
 
 
