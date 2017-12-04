@@ -185,7 +185,7 @@ def json_response(data):
 
 
 def listing(data):
-    table = """<table class="table">
+    return """<table class="table">
   <thead>
     <tr>
       <th>Title</th>
@@ -197,16 +197,29 @@ def listing(data):
 
   <tbody>{}</tbody>
 </table>
-"""
+""".format(''.join([listing_row(submission) for submission in data]))
 
+
+def listing_row(submission):
+    comments_table = DYNAMODB.Table('comments')
+    results = comments_table.scan(
+        FilterExpression=conditions.Key('submission_id')
+        .eq(submission['id']), IndexName='CommentSubmissionIndex')
+    comment_count = results['Count']
+    if comment_count == 1:
+        comments = '1 comment'
+    elif 'LastEvaluatedKey' in results:
+        comments = '{}+ comments'.format(comment_count)
+    else:
+        comments = '{} comments'.format(comment_count)
     row = """<tr>
   <td><a href="{url}">{title}</a></td>
   <td>{url}</td>
   <td><a href="communities/{community}">{community}</a></td>
-  <td><a class="btn btn-primary btn-sm" href="submissions/{id}">0 comments</a></td>
+  <td><a class="btn btn-primary btn-sm" href="submissions/{id}">{comments}</td>
 </tr>
 """  # NOQA
-    return table.format(''.join([row.format(**x) for x in data]))
+    return row.format(comments=comments, **submission)
 
 
 def redirect(path):
