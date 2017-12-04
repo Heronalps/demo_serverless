@@ -92,7 +92,9 @@ resources:
               - AttributeName: submission_id
                 KeyType: HASH
             Projection:
-              ProjectionType: KEYS_ONLY
+              NonKeyAttributes:
+                - message
+              ProjectionType: INCLUDE
             ProvisionedThroughput:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1

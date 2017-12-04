@@ -70,7 +70,7 @@ def comment__render(comment):
   </div>
 </div>
 """  # NOQA
-    return body.format(comment_id=comment['id'], message=comment['id'],
+    return body.format(comment_id=comment['id'], message=comment['message'],
                        submission_id=comment['submission_id'])
 
 
